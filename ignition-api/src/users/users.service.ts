@@ -12,6 +12,7 @@ import { randomBytes, createHash } from 'crypto';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginResponseDto } from './dto/login.dto';
+import { Prisma, UserRole } from '@prisma/client';
 import { PasswordActionResponseDto } from './dto/password.dto';
 import { RegisterResponseDto } from './dto/register-response.dto';
 import { SessionService } from '../session/session.service';
@@ -164,6 +165,25 @@ export class UsersService {
 
     const updated = await this.prisma.user.update({
       where: { id: user.id },
+      data: {
+        email: updateDto.email ?? user.email,
+        name: updateDto.name ?? user.name,
+        phone: updateDto.phone ?? user.phone,
+        preferences: parsedPreferences as Prisma.InputJsonValue,
+        displayName: updateDto.displayName ?? user.displayName,
+        bio: updateDto.bio ?? user.bio,
+        avatarUrl: updateDto.avatarUrl ?? user.avatarUrl,
+        socialLinks: (updateDto.socialLinks ?? user.socialLinks) as any,
+      },
+      include: {
+        campaigns: {
+          where: { status: 'ACTIVE' },
+        },
+        donations: true,
+      },
+    }) as Prisma.UserGetPayload<{
+      include: { campaigns: true; donations: true };
+    }>;
       data: updateData,
       include: userProfileInclude,
     });

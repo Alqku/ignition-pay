@@ -394,6 +394,7 @@ model Wallet {
   updatedAt       DateTime      @updatedAt
 
   // Relations
+  addresses Address[]
   user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   depositAddresses DepositAddress[]
 
@@ -403,6 +404,29 @@ model Wallet {
   @@map("wallets")
 }
 
+/// Address model for deposit address management with allocation tracking
+model Address {
+  id             String        @id @default(uuid())
+  walletId       String?
+  address        String        @unique
+  network        WalletNetwork @default(STELLAR)
+  label          String?
+  isActive       Boolean       @default(true)
+  allocatedAt    DateTime?
+  lastActivityAt DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  wallet Wallet? @relation(fields: [walletId], references: [id], onDelete: SetNull)
+
+  @@index([walletId])
+  @@index([address])
+  @@index([network])
+  @@index([isActive])
+  @@index([allocatedAt])
+  @@index([lastActivityAt])
+  @@map("addresses")
 /// DepositAddress model for tracking generated deposit addresses associated with wallets
 model DepositAddress {
   id          String        @id @default(uuid())
