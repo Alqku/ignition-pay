@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
@@ -15,6 +16,7 @@ import { CampaignsModule } from './campaigns/campaigns.module';
 import { UsersModule } from './users/users.module';
 import { WalletsModule } from './wallets/wallets.module';
 import { TransactionsModule } from './transactions/transactions.module';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { SessionModule } from './session/session.module';
 import { AddressesModule } from './addresses/addresses.module';
 
@@ -41,6 +43,8 @@ import { AddressesModule } from './addresses/addresses.module';
   providers: [
     AppService,
     {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
     },
