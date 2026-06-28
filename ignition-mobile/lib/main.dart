@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/network/api_client.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'app.dart';
 
 void main() async {
@@ -12,5 +13,6 @@ void main() async {
   // Initialize API client
   ApiClient().initialize();
   
+  await Firebase.initializeApp();
   runApp(const IgnitionPayApp());
 }
