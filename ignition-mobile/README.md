@@ -1,17 +1,38 @@
-# ignition_mobile
+# Ignition Pay Mobile
 
-A new Flutter project.
+The Flutter mobile application for the Ignition Pay Stellar wallet ecosystem.
+
+## Stack
+
+- **Framework**: Flutter 3.22+
+- **Language**: Dart 3.4+
+- **State Management**: Provider / Riverpod
+- **Storage**: Drift (SQLite), FlutterSecureStorage
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+```bash
+flutter pub get
+flutter run
+```
 
-A few resources to get you started if this is your first Flutter project:
+## Build Targets
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+| Platform | Command             |
+| -------- | ------------------- |
+| Android  | `flutter build apk` |
+| iOS      | `flutter build ios` |
+| Web      | `flutter build web` |
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Features
+
+- Native iOS and Android wallet experience
+- Biometric authentication (Face ID / fingerprint)
+- QR code scanning for Stellar addresses
+- Deep link support for payment requests
+- Push notifications via FCM
+- Offline-resilient transaction drafts
+
+## Architecture
+
+The app follows a feature-first architecture with shared core utilities in `lib/core/` and self-contained feature modules in `lib/features/`.
