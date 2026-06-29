@@ -110,6 +110,7 @@ model ApiKey {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([prefix, isActive])
   @@index([userId])
   @@map("api_keys")
 }
