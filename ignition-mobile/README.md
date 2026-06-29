@@ -38,3 +38,11 @@ flutter run
 ## Architecture
 
 The app follows a feature-first architecture with shared core utilities in `lib/core/` and self-contained feature modules in `lib/features/`.
+
+## Store Publishing Setup
+
+For App Store Connect and Google Play Console preparation, see [docs/STORE_SETUP.md](docs/STORE_SETUP.md). The repository also includes a metadata starter file at [docs/store-metadata-template.json](docs/store-metadata-template.json).
+
+## Testing
+
+For Flutter unit and widget testing conventions, see [docs/TESTING.md](docs/TESTING.md). A minimal smoke test is available at [test/widget_smoke_test.dart](test/widget_smoke_test.dart).

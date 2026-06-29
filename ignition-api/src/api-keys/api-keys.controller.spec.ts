@@ -12,6 +12,9 @@ describe('ApiKeysController', () => {
       findFirst: jest.Mock;
       update: jest.Mock;
     };
+    auditLog: {
+      create: jest.Mock;
+    };
   };
 
   beforeEach(() => {
@@ -23,12 +26,16 @@ describe('ApiKeysController', () => {
         findFirst: jest.fn(),
         update: jest.fn(),
       },
+      auditLog: {
+        create: jest.fn(),
+      },
     };
 
     controller = new ApiKeysController(prisma as unknown as PrismaService);
   });
 
   it('creates a new API key for the authenticated user', async () => {
+    prisma.apiKey.findFirst.mockResolvedValue(null);
     prisma.apiKey.create.mockResolvedValue({
       id: 'api-key-1',
       prefix: 'sk_12345678',
@@ -54,6 +61,17 @@ describe('ApiKeysController', () => {
         }),
       }),
     );
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 'user-1',
+          action: 'ADMIN_ACTION',
+          resourceType: 'ApiKey',
+          resourceId: 'api-key-1',
+          details: expect.stringContaining('created'),
+        }),
+      }),
+    );
     expect(result).toEqual(
       expect.objectContaining({
         id: 'api-key-1',
@@ -62,6 +80,24 @@ describe('ApiKeysController', () => {
         scope: 'read',
       }),
     );
+  });
+
+  it('rejects creating a new API key when an active key already uses the generated prefix', async () => {
+    prisma.apiKey.findFirst.mockResolvedValue({
+      id: 'api-key-existing',
+      prefix: 'sk_12345678',
+      isActive: true,
+    });
+
+    await expect(
+      controller.create({
+        user: {
+          sub: 'user-1',
+          walletAddress: 'GABC',
+          role: 'USER',
+        },
+      } as never),
+    ).rejects.toThrow('An active API key already exists for this prefix');
   });
 
   it('revokes an owned API key and hides ownership details', async () => {
@@ -84,6 +120,17 @@ describe('ApiKeysController', () => {
         data: {
           isActive: false,
         },
+      }),
+    );
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 'user-1',
+          action: 'ADMIN_ACTION',
+          resourceType: 'ApiKey',
+          resourceId: 'api-key-1',
+          details: expect.stringContaining('revoked'),
+        }),
       }),
     );
     expect(result).toEqual({ message: 'API key revoked successfully' });
@@ -134,6 +181,39 @@ describe('ApiKeysController', () => {
         expect.objectContaining({
           id: 'api-key-1',
           name: 'Production Key',
+        }),
+      ],
+    });
+  });
+
+  it('lists API keys for a specific user as an admin', async () => {
+    prisma.apiKey.findMany.mockResolvedValue([
+      {
+        id: 'api-key-1',
+        name: 'Production Key',
+        prefix: 'sk_12345678',
+        scope: 'read',
+        isActive: false,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+        lastUsedAt: null,
+        expiresAt: null,
+      },
+    ]);
+
+    const result = await controller.listForUser('user-2');
+
+    expect(prisma.apiKey.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'user-2' },
+      }),
+    );
+    expect(result).toEqual({
+      userId: 'user-2',
+      apiKeys: [
+        expect.objectContaining({
+          id: 'api-key-1',
+          status: 'revoked',
         }),
       ],
     });
