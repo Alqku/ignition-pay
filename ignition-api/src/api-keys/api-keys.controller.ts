@@ -1,9 +1,12 @@
 import {
+  Body,
   ConflictException,
   Controller,
   Delete,
+  Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -17,7 +20,11 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { createHash, randomBytes } from 'crypto';
 import { Request } from 'express';
+import { AdminGuard } from '../users/guards/admin.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/permissions/permissions.guard';
+import { Permission } from '../auth/permissions/permissions.map';
+import { RequirePermissions } from '../auth/permissions/require-permissions.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 
 interface JwtUser {
@@ -63,6 +70,20 @@ export class ApiKeysController {
       },
     });
 
+    await this.prisma.auditLog.create({
+      data: {
+        userId: req.user.sub,
+        action: 'ADMIN_ACTION',
+        resourceType: 'ApiKey',
+        resourceId: apiKey.id,
+        details: JSON.stringify({
+          action: 'API_KEY_CREATED',
+          prefix,
+          scope: 'read',
+        }),
+      },
+    });
+
     // Return the raw key only once — it cannot be recovered after this response
     return {
       id: apiKey.id,
@@ -96,6 +117,41 @@ export class ApiKeysController {
     });
 
     return { apiKeys };
+  }
+
+  @Get('admin/users/:userId')
+  @UseGuards(JwtAuthGuard, AdminGuard, PermissionsGuard)
+  @RequirePermissions(Permission.APIKEY_MANAGE_ANY)
+  @ApiOperation({ summary: 'List API keys for a specific user (admin)' })
+  @ApiResponse({ status: 200, description: 'User API keys retrieved successfully' })
+  async listForUser(@Param('userId') userId: string) {
+    const apiKeys = await this.prisma.apiKey.findMany({
+      where: {
+        userId,
+      },
+      select: {
+        id: true,
+        name: true,
+        prefix: true,
+        scope: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        lastUsedAt: true,
+        expiresAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return {
+      userId,
+      apiKeys: apiKeys.map((apiKey) => ({
+        ...apiKey,
+        status: apiKey.isActive ? 'active' : 'revoked',
+      })),
+    };
   }
 
   @Patch(':id')
@@ -211,6 +267,18 @@ export class ApiKeysController {
     if (result.count === 0) {
       throw new NotFoundException('API key not found');
     }
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: req.user.sub,
+        action: 'ADMIN_ACTION',
+        resourceType: 'ApiKey',
+        resourceId: id,
+        details: JSON.stringify({
+          action: 'API_KEY_REVOKED',
+        }),
+      },
+    });
 
     return { message: 'API key revoked successfully' };
   }

@@ -12,6 +12,9 @@ describe('ApiKeysController', () => {
       findFirst: jest.Mock;
       update: jest.Mock;
     };
+    auditLog: {
+      create: jest.Mock;
+    };
   };
 
   beforeEach(() => {
@@ -22,6 +25,9 @@ describe('ApiKeysController', () => {
         findMany: jest.fn(),
         findFirst: jest.fn(),
         update: jest.fn(),
+      },
+      auditLog: {
+        create: jest.fn(),
       },
     };
 
@@ -52,6 +58,17 @@ describe('ApiKeysController', () => {
           scope: 'read',
           prefix: expect.stringMatching(/^sk_/),
           keyHash: expect.any(String),
+        }),
+      }),
+    );
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 'user-1',
+          action: 'ADMIN_ACTION',
+          resourceType: 'ApiKey',
+          resourceId: 'api-key-1',
+          details: expect.stringContaining('created'),
         }),
       }),
     );
@@ -105,6 +122,17 @@ describe('ApiKeysController', () => {
         },
       }),
     );
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 'user-1',
+          action: 'ADMIN_ACTION',
+          resourceType: 'ApiKey',
+          resourceId: 'api-key-1',
+          details: expect.stringContaining('revoked'),
+        }),
+      }),
+    );
     expect(result).toEqual({ message: 'API key revoked successfully' });
   });
 
@@ -153,6 +181,39 @@ describe('ApiKeysController', () => {
         expect.objectContaining({
           id: 'api-key-1',
           name: 'Production Key',
+        }),
+      ],
+    });
+  });
+
+  it('lists API keys for a specific user as an admin', async () => {
+    prisma.apiKey.findMany.mockResolvedValue([
+      {
+        id: 'api-key-1',
+        name: 'Production Key',
+        prefix: 'sk_12345678',
+        scope: 'read',
+        isActive: false,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+        lastUsedAt: null,
+        expiresAt: null,
+      },
+    ]);
+
+    const result = await controller.listForUser('user-2');
+
+    expect(prisma.apiKey.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'user-2' },
+      }),
+    );
+    expect(result).toEqual({
+      userId: 'user-2',
+      apiKeys: [
+        expect.objectContaining({
+          id: 'api-key-1',
+          status: 'revoked',
         }),
       ],
     });
